@@ -19,7 +19,6 @@ fn = 'seeds.dat'
 # Dictionary to store mappings
 mappings = { }
 
-
 # Class for holding an entry within a Mapping
 class Entry:
     def __init__(self, dest_start, src_start, length):
@@ -49,51 +48,37 @@ class Mapping:
     def translate(self, seed_num):
         for entry in self.entry_list:
             chk = entry.translate(seed_num)
-            if (chk != None):
+            if chk != None:
                 return chk
 
         # If not found, use same seed number
         return seed_num
 
-
 # Read seed data and mapping
 with open(fn, 'r') as file:
     # Read list of seed numbers
-    line = file.readline()
-    seed_nums = re.findall(r'\d+', line)
-    for i in range(len(seed_nums)):
-        seed_nums[i] = int(seed_nums[i])
+    seed_nums = map(int, re.findall(r'\d+', file.readline()))
 
-    line = file.readline()
-    while line:
-        line = line.rstrip('\n')
-
-        # If line break, reset for new map
-        if (line == ''):
-            line = file.readline()
-            line = line.rstrip('\n')
-            matches = re.findall(r'(\w+)-to-(\w+) map', line)
-
-            from_cat = matches[0][0]
-            to_cat = matches[0][1]
-            map = Mapping(from_cat, to_cat)
-
-            mappings[from_cat] = map
+    m = None
+    for line in file:
+        if line == '\n':
+            m = None
+        elif m == None:
+            from_cat, to_cat = re.findall(r'(\w+)-to-(\w+) map', line)[0]
+            mappings[from_cat] = m = Mapping(from_cat, to_cat)
         else:
             # Add new entry
             matches = re.findall(r'\d+', line)
-            map.add(int(matches[0]), int(matches[1]), int(matches[2]))
-
-        line = file.readline()
+            m.add(int(matches[0]), int(matches[1]), int(matches[2]))
 
 lowest = sys.maxsize
 for seed_num in seed_nums:
     cur_src = "seed"
     num = seed_num
     while cur_src != "location":
-        map = mappings[cur_src]
-        new_num = map.translate(num)
-        cur_src = map.dest_name
+        m = mappings[cur_src]
+        new_num = m.translate(num)
+        cur_src = m.dest_name
         num = new_num
 
     lowest = min(lowest, num)

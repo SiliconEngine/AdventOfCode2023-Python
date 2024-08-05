@@ -16,23 +16,16 @@ See test.dat for sample data and image.dat for full data.
 Author: Tim Behrendsen
 """
 
-import re
-import sys
-from functools import reduce
-from operator import add
-
 fn = 'test.dat'
 fn = 'records.dat'
 
 # Cache for storing visited patterns to memoize
 cache = {}
 
-#
 # Check if pattern is consistent with the hash counts
 # Returns tuple of:
 #         True/false, if done
 #         Count of number of pattern matches
-#
 def chk_done(springs, counts):
     def get_count(chk_list, counts):
         same_count = 0
@@ -47,7 +40,6 @@ def chk_done(springs, counts):
     had_q = False
     for c in springs:
         if c == ord('?'):
-            #return (False, get_count(chk_list, counts))
             hash_count = 0
             had_q = True
             break
@@ -60,11 +52,9 @@ def chk_done(springs, counts):
     if hash_count > 0:
         chk_list.append(hash_count)
 
-    return (not had_q and counts == chk_list, get_count(chk_list, counts))
+    return (not had_q and counts == chk_list), get_count(chk_list, counts)
 
-#
 # Check if pattern we're testing is possible, so we can trim that part of the tree
-#
 def check_if_possible(springs, counts):
     chk_list = []
     hash_count = 0
@@ -86,31 +76,18 @@ def check_if_possible(springs, counts):
 
     is_possible = len(chk_list) == 0 or chk_list == counts[0:len(chk_list)]
     if not is_possible:
-        return is_possible
+        return False
 
     # If perfect match, we're good
     if chk_list == counts:
         return True
 
-    num_needed = reduce(add, counts)
-    num_have = 0
-    hit_q = False
-    for c in springs:
-        if c == ord('?') or c == ord('#'):
-            num_have += 1
-
+    num_needed = sum(counts)
+    num_have = sum(1 for c in springs if c == ord('?') or c == ord('#'))
     return num_have >= num_needed
 
-#
-# Create key for the pattern cache
-#
-def get_key(chk_count, springs, idx):
-    return f"{chk_count}-{springs[idx:].decode('ascii')}"
-
-#
 # Recursively test each pattern
 # Returns total number of patterns, totallying up each recursive call
-#
 def do_combos(springs, counts):
     total = 0
     try:
@@ -122,7 +99,7 @@ def do_combos(springs, counts):
             return 1
 
         idx = springs.index(ord('?'))
-        key = get_key(chk_count, springs, idx)
+        key = (chk_count, springs[idx:].decode('ascii'))
 
         if idx > 0 and springs[idx-1] == ord('.'):
             cache_total = cache.get(key)
@@ -153,43 +130,26 @@ def do_combos(springs, counts):
 
     return total
 
-#
 # Figure out number of combinations for 'springs' pattern and counts
 # of hashes
 #
 # Returns number of patterns
-#
 def calc_combos(springs, counts):
     # Reset the cache
     global cache
     cache = {}
+    return do_combos(bytearray(springs, encoding='ascii'), counts)
 
-    num = do_combos(bytearray(springs, encoding='ascii'), counts)
-    return num
-
-#
 # Main processing. Return total number of pattern matches.
-#
 def main():
+    def get_params(line):
+        a = line.split(' ')
+        springs = a[0] + '?' + a[0] + '?' + a[0] + '?' + a[0] + '?' + a[0]
+        counts = list(map(int, a[1].split(',')))
+        counts = counts + counts + counts + counts + counts
+        return springs, counts
 
-    # Read each spring map, calculate combos and total them up
-    total = 0
-    with open(fn, 'r') as file:
-        for line in file:
-            line = line.rstrip('\n')
-            print(line)
-
-            # Get the pattern and counts, and repeat four more times
-            a = line.split(' ')
-            springs = a[0] + '?' + a[0] + '?' + a[0] + '?' + a[0] + '?' + a[0]
-            counts = [ int(n) for n in a[1].split(',') ]
-            counts = counts + counts + counts + counts + counts
-
-            num = calc_combos(springs, counts)
-            print(f"---> num is {num}\n")
-            total += num
-
-    return total
+    return sum(calc_combos(s, c) for s, c in (get_params(line.rstrip()) for line in open(fn, 'r')))
 
 total = main()
 print(f"Total combinations is {total}")

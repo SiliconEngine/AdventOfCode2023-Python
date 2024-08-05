@@ -14,20 +14,15 @@ See test.dat for sample data and image.dat for full data.
 Author: Tim Behrendsen
 """
 
-import re
-import sys
-
 fn = 'test.dat'
 fn = 'records.dat'
 
-#
 # Check if pattern is consistent with the hash counts
-#
 def chk_consist(springs, counts):
     chk_list = []
     hash_count = 0
     for c in springs:
-        if (c == ord('#')):
+        if c == ord('#'):
             hash_count += 1
         elif hash_count > 0:
             chk_list.append(hash_count)
@@ -38,11 +33,8 @@ def chk_consist(springs, counts):
 
     return counts == chk_list
 
-
-#
 # Recursively test each pattern
 # Returns total number of patterns, totallying up each recursive call
-#
 def do_combos(springs, counts):
     total = 0
     try:
@@ -59,35 +51,20 @@ def do_combos(springs, counts):
 
     return total
 
-#
 # Figure out number of combinations for 'springs' pattern and counts
 # of hashes
 #
 # Returns number of patterns
-#
 def calc_combos(s):
     a = s.split(' ')
     springs = a[0]
-    counts = [ int(n) for n in a[1].split(',') ]
-    num = do_combos(bytearray(springs, encoding='ascii'), counts)
-    return num
+    counts = list(map(int, a[1].split(',')))
+    return do_combos(bytearray(springs, encoding='ascii'), counts)
 
-
-#
 # Main processing. Return total number of pattern matches.
-#
 def main():
     # Read each spring map, calculate combos and total them up
-    total = 0
-    with open(fn, 'r') as file:
-        for line in file:
-            line = line.rstrip('\n')
-            print(line)
-            num = calc_combos(line)
-            print(f"---> num is {num}\n")
-            total += num
-
-    return total
+    return sum(calc_combos(line.rstrip()) for line in open(fn, 'r'))
 
 total = main()
 print(f"Total combinations is {total}")

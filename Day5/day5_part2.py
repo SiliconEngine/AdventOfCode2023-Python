@@ -116,45 +116,31 @@ class Mapping:
 # Read seed data and mapping
 with open(fn, 'r') as file:
     # Read list of seed numbers
-    line = file.readline()
-    seed_nums = re.findall(r'\d+', line)
-    seed_ranges = []
-    for i in range(0, len(seed_nums), 2):
-        seed_num = int(seed_nums[i])
-        seed_ranges.append( (seed_num, seed_num + int(seed_nums[i+1]) - 1) )
+    seed_nums = list(map(int, re.findall(r'\d+', file.readline())))
+    seed_ranges = [(seed_nums[i], seed_nums[i] + seed_nums[i+1] - 1)
+        for i in range(0, len(seed_nums), 2)]
 
-    line = file.readline()
-    while line:
-        line = line.rstrip('\n')
-
-        # If line break, reset for new map
-        if (line == ''):
-            line = file.readline()
-            line = line.rstrip('\n')
+    cat_map = None
+    for line in file:
+        if line == '\n':            # Blank line, reset for new map
+            cat_map = None
+        elif cat_map == None:
             matches = re.findall(r'(\w+)-to-(\w+) map', line)
-
-            from_cat = matches[0][0]
-            to_cat = matches[0][1]
+            from_cat, to_cat = matches[0]
             cat_map = Mapping(from_cat, to_cat)
-
             mappings[from_cat] = cat_map
         else:
             # Add new entry
             matches = re.findall(r'\d+', line)
-            dest_start = int(matches[0])
-            src_start = int(matches[1])
-            entry_len = int(matches[2])
+            dest_start, src_start, entry_len = map(int, matches)
             cat_map.add(dest_start, src_start, entry_len)
             max_cat_num = max(max_cat_num, dest_start + entry_len, src_start + entry_len)
-
-        line = file.readline()
 
 for cat_map in mappings.values():
     cat_map.fill_gaps()
 
 lowest = sys.maxsize
 for seed_range in seed_ranges:
-
     cat_set = [ seed_range ]
     cur_src = "seed"
     while cur_src != "location":
@@ -164,7 +150,6 @@ for seed_range in seed_ranges:
         cat_set = new_cat_set
 
     # Find lowest in set of ranges
-    for r in cat_set:
-        lowest = min(lowest, r[0])
+    lowest = min(lowest, min(r[0] for r in cat_set))
 
 print(f"Lowest is {lowest}")

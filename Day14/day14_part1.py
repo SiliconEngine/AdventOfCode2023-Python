@@ -21,10 +21,6 @@ round_rock = ord('O')
 square_rock = ord('#')
 space = ord('.')
 
-def print_plat(platform):
-    for line in platform:
-        print(line)
-
 def roll_north(platform):
     num_rows = len(platform)
     num_cols = len(platform[0])

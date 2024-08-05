@@ -1,11 +1,14 @@
 #!/usr/bin/python
-"""Advent of Code 2023, Day 7, Part 2
+"""Advent of Code 2023, Day 7
 
 https://adventofcode.com/2023/day/7
 
 Give sets of five playing cards, figure the hand type and rank them by strength.
-Finally calculate a winning score by multiplying the bid by the index.  In
-part 2, the 'J' is now a joker, instead of a jack.
+Finally calculate a winning score by multiplying the bid by the index. In part 2,
+the 'J' is now a joker, instead of a jack.
+
+If hands are equal type, then cards are compared in order to determine which hand
+is the strongest.
 
 See test.dat for sample data and cards.dat for full data.
 
@@ -21,28 +24,24 @@ fn = 'cards.dat'
 
 Hand = Enum('Hand', 'FIVE_KIND FOUR_KIND FULL_HOUSE THREE_KIND TWO_PAIR ONE_PAIR HIGH_CARD')
 
-card_ranks = 'J123456789TQKA'
-
 #
 # Figure hand type and return Hand enum type
 #
-def get_hand_type(cards):
+def get_hand_type(hand, jokers):
     class Counts:
         def __init__(self, card, count):
-            self.card = card
-            self.count = count
-        
-        def __repr__(self):
-            return f"[{self.card} {self.count}]"
+            self.card, self.count = card, count
 
     counts = { }
-    for card in cards:
+    for card in hand:
         counts[card] = counts.get(card, 0) + 1
 
-    num_jokers = counts.get('J', 0)
-    counts.pop('J', None)
-    if (num_jokers == 5):
-        return Hand.FIVE_KIND
+    num_jokers = 0
+    if jokers:
+        num_jokers = counts.get('J', 0)
+        counts.pop('J', None)
+        if num_jokers == 5:
+            return Hand.FIVE_KIND
 
     list = [Counts(k, v) for k, v in counts.items() ]
     list.sort(key=lambda e: e.count, reverse=True)
@@ -76,39 +75,25 @@ def get_hand_type(cards):
 
     return Hand.HIGH_CARD
 
-#
-# Compare cards for sort
-#
-def compare_hands(a, b):
-    n = b['type'].value - a['type'].value
-    if (n != 0):
-        return n
+# Calculate winnings, depending on whether Jacks are actually Jokers
+def calc(hand_list, jokers):
+    # Card rank varies whether it has Jokers or Jacks
+    card_ranks = '123456789TJQKA' if not jokers else 'J123456789TQKA'
 
-    # If equal value, then compare by card strength
-    crd1 = a['cards']
-    crd2 = b['cards']
-    for i in range(5):
-        c1 = crd1[i]
-        c2 = crd2[i]
-        if (c1 != c2):
-            return card_ranks.index(c1) - card_ranks.index(c2)
-    
-    return 0
+    for hand in hand_list:
+        hand['type'] = get_hand_type(hand['cards'], jokers)
 
-# Read card hands and build list with classification
-card_list = []
-with open(fn, 'r') as file:
-    for line in file:
-        matches = re.findall(r'(\w{5}) (\d+)', line)
-        card_list.append({ 'cards': matches[0][0], 'bid': int(matches[0][1]), 'type': get_hand_type(matches[0][0]) })
+    # Sort hands by strength
+    # Sort by hand strength, then by each card in order
+    sort_order = lambda hand: [0-hand['type'].value] + [card_ranks.index(c) for c in hand['cards']]
+    hand_list.sort(key=sort_order)
 
-# Sort hands by strength
-card_list.sort(key=cmp_to_key(compare_hands))
+    # Calculate total winnings
+    return sum(hand['bid'] * (i+1) for i, hand in enumerate(hand_list))
 
-# Calculate total winnings
-winnings = 0
-for i in range(len(card_list)):
-    card = card_list[i]
-    winnings += card['bid'] * (i+1)
+hand_list = [ { 'cards': cards, 'bid': int(bid) } for cards, bid in
+    (re.findall(r'(\w{5}) (\d+)', line)[0] for line in open(fn, 'r')) ]
 
-print(f"Total winnings is {winnings}")
+print(f"Part 1: total winnings is {calc(hand_list.copy(), jokers=False)}")
+print(f"Part 2: total winnings is {calc(hand_list.copy(), jokers=True)}")
+

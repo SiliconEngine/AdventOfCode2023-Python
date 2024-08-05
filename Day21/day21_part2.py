@@ -150,10 +150,13 @@ class Garden:
                 if new_dist < new_node.tent_dist:
                     #new_node.prior_node = cur_node
                     # If first examination of node, add to priority queue
-                    if new_node.tent_dist == sys.maxsize:
-                        heapq.heappush(unv_set, new_node)
-
+                    new = new_node.tent_dist == sys.maxsize
                     new_node.tent_dist = new_dist
+                    if new:
+                        heapq.heappush(unv_set, new_node)
+                    else:
+                        heapq.heapify()
+
                     if is_even and not new_node.is_even:
                         new_node.is_even = True
                         self.total_even += 1
